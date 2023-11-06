@@ -1,0 +1,93 @@
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.5gaiot.virtualmirror";
+option java_outer_classname = "VirtualMirrorProto";
+option objc_class_prefix = "5VM";
+
+package virtualmirror_v2;
+
+// Interface exported by the server.
+service Mirror {
+
+  // 輸出骨架偵測畫面
+  rpc SkeletonFrame(Frame) returns (Result) {}
+  // 輸出姿態事件
+  rpc PoseDetected(Pose) returns (Result) {}
+  // 輸出動作事件
+  rpc ActionDetected(Action) returns (Result) {}
+}
+
+// 邊緣雲應用骨架畫面資訊
+message Frame {
+  int32 camera = 1; // 攝影機代號:0,1,2...
+  int32 frame_index = 2;  // 影格標號：0,1,2...
+  string timestamp = 3;  // 從1.2傳過來的時戳(單位：秒)，範例：'1694084724314.6716'
+  string skeleton_type = 4;  // 骨架資訊類別，["COCO", "OpenPose", "MediaPipe"]
+  string skeletons = 5;  // 骨架資訊，JSON格式
+  // pose_name = ['open_hand', 'bow', 'left_dodge', 'right_dodge', 'lift', 'heart', 'cross'] 
+  //        說明：['雙手張開', '拉弓', '左閃躲', '右閃躲', '雙手高舉', '雙手愛心', '雙手交叉']
+  // action_name = ['forehand_swing', 'backhand_swing', 'smash', 'circle', 'control', 'punch']
+  //        說明：['正手揮拍', '反手揮拍', '殺球', '心靈控制', '短短火焰飛飛球', '慈悲聖光連環擊']
+  string pose_estimated = 6; // 姿勢與動作辨識，JSON格式 {"pose": [pose_name], "action": [action_name]}
+  string frame_raw = 7; // 空值 (預留)
+  string frame_mask = 8; // 空值 (預留)
+}
+
+// 邊緣雲應用姿態事件
+message Pose {
+  int32 camera = 1; // 攝影機代號:0,1,2...
+  int32 frame_index = 2;  // 影格標號：0,1,2...
+  string timestamp = 3;  // 從1.2傳過來的時戳(單位：秒)，範例：'1694084724314.6716'
+  // 姿態： ['雙手張開', '拉弓', '左閃躲', '右閃躲', '雙手高舉', '雙手愛心', '雙手交叉']
+  string pose = 4; // string, 兩個玩家姿態組成之陣列 "[p1_pose, p2_pose]"，pose內容為以下字串之一: 'open_hand', 'bow', 'left_dodge', 'right_dodge', 'lift', 'heart', 'cross'
+                    // 範例："[\"open_hand\", \"bow\"]"
+}
+
+// 邊緣雲應用動作事件
+message Action {
+  int32 camera = 1; // 攝影機代號:0,1,2...
+  int32 frame_index = 2;  // 影格標號：0,1,2...
+  string timestamp = 3;  // 從1.2傳過來的時戳(單位：秒)，範例：'1694084724314.6716'
+  // 動作： ['正手揮拍', '反手揮拍', '殺球', '心靈控制', '短短火焰飛飛球', '慈悲聖光連環擊']
+  string action = 4; // string格式，內容為以下字串之一: 'forehand_swing', 'backhand_swing', 'smash', 'circle', 'control', 'punch'
+                      // 範例："forehand_swing"
+}
+
+// 回應
+message Result {
+  int32 code = 1; // 回應碼，0=呼叫成功
+  string error_message = 2;
+}
+
+// skeletons:
+
+// Coco:
+// [{"box":[x1,y1,x2,y2],"keypoint":[[kx0,ky0],[kx1,ky1],[kx2,ky2],[kx3,ky3],[kx4,ky4],[kx5,ky5],[kx6,ky6],[kx7,ky7],[kx8,ky8],[kx9,ky9],[kx10,ky10],[kx11,ky11],[kx12,ky12],[kx13,ky13],[kx14,ky14],[kx15,ky15],[kx16,ky16]]}]
+// Coco keypoints
+// ["nose", "left_eye", "right_eye", "left_ear", "right_ear", 
+//  "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", 
+//  "left_wrist", "right_wrist", "left_hip", "right_hip", "left_knee", 
+//  "right_knee", "left_ankle", "right_ankle"]
+// Read more at: https://viso.ai/computer-vision/coco-dataset/
+
+// MediaPipe:
+// [{"keypoint":[[kx0,ky0,kz0,p0],[kx1,ky1,kz1,p1], ....,[kx32,ky32,kz32,p32]]}]
+// keypoints
+// ["nose", "left eye (inner)", "left eye", "left eye (outer)",
+//  "right eye (inner)", "right eye", "right eye (outer)",
+//  "left ear", "right ear",
+//  "mouth (left)", "mouth (right)",
+//  "left shoulder", "right shoulder", 
+//  "left elbow", "right elbow", 
+//  "left wrist", "right wrist", 
+//  "left pinky", "right pinky", 
+//  "left index", "right index", 
+//  "left thumb", "right thumb", 
+//  "left hip", "right hip", 
+//  "left knee","right knee", 
+//  "left ankle", "right ankle"
+//  "left heel", "right heel"
+//  "left foot index", "right foot index"]
+// Read more at: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker/index#models
